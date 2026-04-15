@@ -263,12 +263,20 @@
     </div>
 
     <template #footer>
-      <n-space justify="space-between">
-        <n-button v-if="currentStep > 3 && currentStep < 6" @click="handleSkip">
-          跳过向导
-        </n-button>
-        <div v-else></div>
-        <n-space>
+      <n-space justify="space-between" align="center">
+        <!-- 左侧：返回上一步 -->
+        <div class="footer-left">
+          <n-button v-if="currentStep > 1 && currentStep < 6" quaternary @click="handlePrev">
+            返回上一步
+          </n-button>
+        </div>
+
+        <!-- 右侧：跳转或进行下一步 -->
+        <n-space align="center">
+          <n-button v-if="currentStep > 3 && currentStep < 6" quaternary @click="handleSkip">
+            跳过向导
+          </n-button>
+          
           <n-button
             v-if="(currentStep === 1 && bibleGenerated) || (currentStep === 2 && charactersGenerated) || (currentStep === 3 && locationsGenerated)"
             type="primary"
@@ -291,7 +299,7 @@
 
 <script setup lang="ts">
 import { h, ref, watch, computed, onUnmounted } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, useDialog } from 'naive-ui'
 import { bibleApi, type BibleDTO, type StyleNoteDTO } from '@/api/bible'
 import { worldbuildingApi } from '@/api/worldbuilding'
 import { workflowApi, type MainPlotOptionDTO } from '@/api/workflow'
@@ -445,6 +453,7 @@ const props = withDefaults(
 )
 
 const message = useMessage()
+const dialog = useDialog()
 
 const emit = defineEmits<{
   (e: 'update:show', value: boolean): void
@@ -711,6 +720,8 @@ const handleNext = async () => {
   if (currentStep.value === 1) {
     // 进入第2步：生成人物
     currentStep.value = 2
+    if (charactersGenerated.value) return 
+
     generatingCharacters.value = true
     try {
       await bibleApi.generateBible(props.novelId, 'characters')
@@ -733,6 +744,8 @@ const handleNext = async () => {
   } else if (currentStep.value === 2) {
     // 进入第3步：生成地点
     currentStep.value = 3
+    if (locationsGenerated.value) return
+
     generatingLocations.value = true
     try {
       await bibleApi.generateBible(props.novelId, 'locations')
@@ -757,15 +770,35 @@ const handleNext = async () => {
   }
 }
 
+const handlePrev = () => {
+  if (currentStep.value > 1) {
+    currentStep.value--
+  }
+}
+
 const handleSkip = () => {
-  if (!confirm('确认退出向导？当前修改将不会保存。')) return
-  emit('skip')
-  emit('update:show', false)
+  dialog.warning({
+    title: '确认退出向导？',
+    content: '当前设置进度将不会保存。您可以在之后通过左侧菜单重新开启向导。',
+    positiveText: '确认退出',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      emit('skip')
+      emit('update:show', false)
+    },
+  })
 }
 
 const requestClose = () => {
-  if (!confirm('确认退出向导？当前修改将不会保存。')) return
-  emit('update:show', false)
+  dialog.warning({
+    title: '确认退出向导？',
+    content: '当前设置进度将不会保存。您可以在之后从左侧菜单重新开启向导。',
+    positiveText: '确认退出',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      emit('update:show', false)
+    },
+  })
 }
 
 const handleComplete = () => {

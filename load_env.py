@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = _PACKAGE_ROOT
 _ENV_PATH = _PACKAGE_ROOT / ".env"
 
 
