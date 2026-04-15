@@ -42,9 +42,9 @@
                   <n-tag
                     size="small"
                     round
-                    :type="cfg.provider === 'openai' ? 'success' : 'info'"
+                    :type="cfg.provider === 'openai' ? 'success' : (cfg.provider === 'gemini' ? 'error' : 'info')"
                   >
-                    {{ cfg.provider === 'openai' ? 'OpenAI' : 'Anthropic' }}
+                    {{ cfg.provider === 'openai' ? 'OpenAI' : (cfg.provider === 'gemini' ? 'Gemini' : 'Anthropic') }}
                   </n-tag>
                   <n-tag v-if="cfg.id === activeId" size="small" round type="warning">
                     激活
@@ -108,7 +108,7 @@
             <n-form-item label="Base URL" path="base_url">
               <n-input
                 v-model:value="form.base_url"
-                :placeholder="form.provider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'"
+                :placeholder="form.provider === 'gemini' ? 'https://generativelanguage.googleapis.com (可选)' : (form.provider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1')"
               />
             </n-form-item>
 
@@ -306,7 +306,7 @@ const modelOptions = ref<Array<{ label: string; value: string }>>([])
 
 const form = ref({
   name: '',
-  provider: 'openai' as 'openai' | 'anthropic',
+  provider: 'openai' as 'openai' | 'anthropic' | 'gemini',
   api_key: '',
   base_url: '',
   model: '',
@@ -317,6 +317,7 @@ const form = ref({
 const providerOptions = [
   { label: 'OpenAI Compatible', value: 'openai' },
   { label: 'Anthropic', value: 'anthropic' },
+  { label: 'Google Gemini', value: 'gemini' },
 ]
 
 function startCreate() {

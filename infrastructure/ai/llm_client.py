@@ -21,25 +21,52 @@ class LLMClient:
         if provider:
             self.provider = provider
         else:
-            # 优先 ARK (OpenAI 兼容)，其次 Anthropic，最后 Mock
-            ark_key = os.getenv("ARK_API_KEY", "").strip()
-            anthropic_key = (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN") or "").strip()
-
-            if ark_key:
+            provider_name = os.getenv("LLM_PROVIDER", "").lower()
+            
+            if provider_name == "openai":
                 settings = Settings(
-                    api_key=ark_key,
-                    base_url=os.getenv("ARK_BASE_URL", "").strip() or None,
+                    api_key=os.getenv("OPENAI_API_KEY", "").strip(),
+                    base_url=os.getenv("OPENAI_BASE_URL", "").strip() or None,
                     default_model=os.getenv("ARK_MODEL", ""),
                 )
                 self.provider = OpenAIProvider(settings)
-            elif anthropic_key:
+            elif provider_name == "gemini":
+                from infrastructure.ai.providers.gemini_provider import GeminiProvider
                 settings = Settings(
-                    api_key=anthropic_key,
-                    base_url=self._get_base_url()
+                    api_key=os.getenv("GEMINI_API_KEY", "").strip(),
+                    base_url=os.getenv("GEMINI_BASE_URL", "").strip() or None,
+                    default_model=os.getenv("WRITING_MODEL", ""), # 使用 Manager 注入的环境变量
+                )
+                self.provider = GeminiProvider(settings)
+            elif provider_name == "anthropic":
+                settings = Settings(
+                    api_key=os.getenv("ANTHROPIC_API_KEY", "").strip(),
+                    base_url=os.getenv("ANTHROPIC_BASE_URL", "").strip() or None
                 )
                 self.provider = AnthropicProvider(settings)
             else:
-                self.provider = MockProvider()
+                # 兼容旧逻辑/环境变量
+                self.provider = self._auto_detect_provider()
+
+    def _auto_detect_provider(self):
+        """兼容旧逻辑：根据环境变量自动探测提供商"""
+        ark_key = os.getenv("ARK_API_KEY", "").strip()
+        anthropic_key = (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN") or "").strip()
+
+        if ark_key:
+            settings = Settings(
+                api_key=ark_key,
+                base_url=os.getenv("ARK_BASE_URL", "").strip() or None,
+                default_model=os.getenv("ARK_MODEL", ""),
+            )
+            return OpenAIProvider(settings)
+        elif anthropic_key:
+            settings = Settings(
+                api_key=anthropic_key,
+                base_url=os.getenv("ANTHROPIC_BASE_URL", "").strip() or None
+            )
+            return AnthropicProvider(settings)
+        return MockProvider()
 
     def _get_api_key(self) -> Optional[str]:
         """获取 API key"""

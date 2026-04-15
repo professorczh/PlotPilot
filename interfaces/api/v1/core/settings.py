@@ -88,6 +88,9 @@ def activate_config(config_id: str):
 async def fetch_models(body: FetchModelsRequest):
     if body.provider == "anthropic":
         return await _fetch_anthropic_models(body.api_key, body.base_url)
+    
+    if body.provider == "gemini":
+        return await _fetch_gemini_models(body.api_key, body.base_url)
 
     if not body.base_url:
         return []
@@ -129,16 +132,33 @@ async def fetch_embedding_models(body: FetchModelsRequest):
 # ── helpers ─────────────────────────────────────────────────
 
 async def _fetch_openai_models(api_key: str, base_url: str) -> List[str]:
+    # 强制禁用 http2（解决代理环境下的 SSL UNEXPECTED_EOF 问题）
     url = f"{base_url.rstrip('/')}/models"
+    params = {}
+    headers = {"Authorization": f"Bearer {api_key}"}
+    
+    # 针对 Gemini 官方域名的特殊处理
+    if "generativelanguage.googleapis.com" in url:
+        if "/v1" not in url:
+            url = f"{base_url.rstrip('/')}/v1beta/models"
+        params["key"] = api_key
+        headers = {}
+
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        async with httpx.AsyncClient(timeout=10, http2=False) as client:
+            resp = await client.get(url, headers=headers, params=params)
             resp.raise_for_status()
             data = resp.json()
-            models = data.get("data", [])
-            return sorted(m["id"] for m in models if "id" in m)
+            models = data.get("models") or data.get("data", [])
+            results = []
+            for m in models:
+                name = m.get("name", m.get("id"))
+                if name:
+                    if name.startswith("models/"): name = name[7:]
+                    results.append(name)
+            return sorted(results)
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(502, f"API returned {exc.response.status_code}")
+        raise HTTPException(502, f"API returned {exc.response.status_code}: {exc.response.text}")
     except Exception as exc:
         logger.warning("fetch-models failed: %s", exc)
         raise HTTPException(502, f"Failed to fetch models: {exc}")
@@ -169,3 +189,43 @@ async def _fetch_anthropic_models(api_key: str, base_url: str) -> List[str]:
             return await _fetch_openai_models(api_key, fallback_base)
         except Exception:
             raise HTTPException(502, f"Failed to fetch models (tried both Anthropic and OpenAI format): {exc}")
+
+async def _fetch_gemini_models(api_key: str, base_url: str) -> List[str]:
+    try:
+        from google import genai
+        from google.genai import types
+        
+        api_key = api_key.strip()
+        http_opts = None
+        if base_url:
+            http_opts = types.HttpOptions(base_url=base_url.rstrip("/"))
+            
+        # 强制注入代理并禁用 HTTP/2 (解决子进程连接与 SSL 握手问题)
+        import os
+        os.environ["HTTPX_HTTP2"] = "0"
+        os.environ["HTTP_PROXY"] = "socks5h://127.0.0.1:10808"
+        os.environ["HTTPS_PROXY"] = "socks5h://127.0.0.1:10808"
+
+        client = genai.Client(api_key=api_key, http_options=http_opts)
+        models = []
+        # 使用同步 list_models，因为它通常比异步更稳定且此处并无高并发需求
+        for m in client.models.list():
+            # 过滤掉不支持生成内容或嵌入的模型，且只保留 gemini 系列
+            if "generateContent" in m.supported_generation_methods and "gemini" in m.name:
+                # 去掉 models/ 前缀
+                name = m.name
+                if name.startswith("models/"):
+                    name = name[7:]
+                models.append(name)
+        return sorted(models)
+    except Exception as exc:
+        logger.warning("Gemini SDK fetch-models failed, trying direct HTTP fallback: %s", exc)
+        # 尝试通过原始 HTTP 请求绕过 SDK 的 SSL 限制
+        try:
+            # 构造 Gemini 的标准 OpenAI 兼容模型列表 URL
+            fallback_base = base_url or "https://generativelanguage.googleapis.com"
+            # 这是一个常见的绕过 SDK SSL 限制的手段
+            return await _fetch_openai_models(api_key, fallback_base)
+        except Exception as fallback_exc:
+            logger.error("All fetch methods failed: %s", fallback_exc)
+            raise HTTPException(502, f"Failed to fetch Gemini models: {exc}")

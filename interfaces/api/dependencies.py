@@ -120,6 +120,33 @@ def _openai_settings(require_key: bool = True) -> Optional[Settings]:
     )
 
 
+def _gemini_api_key() -> Optional[str]:
+    raw = os.getenv("GEMINI_API_KEY")
+    if raw is None:
+        return None
+    key = raw.strip()
+    return key or None
+
+
+def _gemini_base_url() -> Optional[str]:
+    u = os.getenv("GEMINI_BASE_URL")
+    return u.strip() if u and u.strip() else None
+
+
+def _gemini_settings(require_key: bool = True) -> Optional[Settings]:
+    """构建 Gemini Settings。"""
+    key = _gemini_api_key()
+    if not key:
+        if require_key:
+            raise ValueError("Set GEMINI_API_KEY (optional: GEMINI_BASE_URL)")
+        return None
+    return Settings(
+        api_key=key,
+        base_url=_gemini_base_url(),
+        default_model=os.getenv("WRITING_MODEL", ""),
+    )
+
+
 def get_storage() -> FileStorage:
     """获取存储后端实例
 
@@ -329,6 +356,14 @@ def get_llm_service():
                 return OpenAIProvider(settings)
             except ModuleNotFoundError as e:
                 logger.warning("OpenAI provider dependency missing, fallback to MockProvider: %s", e)
+    elif provider == "gemini":
+        settings = _gemini_settings(require_key=False)
+        if settings:
+            try:
+                from infrastructure.ai.providers.gemini_provider import GeminiProvider
+                return GeminiProvider(settings)
+            except ModuleNotFoundError as e:
+                logger.warning("Gemini provider dependency missing, fallback to MockProvider: %s", e)
     else:
         settings = _anthropic_settings(require_key=False)
         if settings:

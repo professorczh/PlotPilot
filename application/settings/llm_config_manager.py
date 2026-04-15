@@ -13,7 +13,7 @@ from typing import List, Literal, Optional
 
 logger = logging.getLogger(__name__)
 
-ProviderType = Literal["openai", "anthropic"]
+ProviderType = Literal["openai", "anthropic", "gemini"]
 EmbeddingMode = Literal["local", "openai"]
 
 
@@ -215,11 +215,17 @@ class LLMConfigManager:
             env["ARK_MODEL"] = profile.model
             for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL"):
                 env.pop(k, None)
-        else:
+        elif profile.provider == "anthropic":
             env["LLM_PROVIDER"] = "anthropic"
             env["ANTHROPIC_API_KEY"] = profile.api_key
             env["ANTHROPIC_BASE_URL"] = profile.base_url
-            for k in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "ARK_API_KEY", "ARK_BASE_URL", "ARK_MODEL"):
+            for k in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "ARK_API_KEY", "ARK_BASE_URL", "ARK_MODEL", "GEMINI_API_KEY", "GEMINI_BASE_URL"):
+                env.pop(k, None)
+        elif profile.provider == "gemini":
+            env["LLM_PROVIDER"] = "gemini"
+            env["GEMINI_API_KEY"] = profile.api_key
+            env["GEMINI_BASE_URL"] = profile.base_url
+            for k in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "ARK_API_KEY", "ARK_BASE_URL", "ARK_MODEL", "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"):
                 env.pop(k, None)
 
         writing = profile.writing_model or profile.model

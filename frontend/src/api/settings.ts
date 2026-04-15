@@ -3,7 +3,7 @@ import { apiClient } from './config'
 export interface LLMConfigProfile {
   id: string
   name: string
-  provider: 'openai' | 'anthropic'
+  provider: 'openai' | 'anthropic' | 'gemini'
   api_key: string
   base_url: string
   model: string

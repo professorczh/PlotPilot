@@ -79,7 +79,7 @@ def create_voice_sample(
 
 @router.get(
     "/novels/{novel_id}/voice/fingerprint",
-    response_model=VoiceFingerprintResponse,
+    response_model=Optional[VoiceFingerprintResponse],
     status_code=200,
     summary="获取文风指纹",
     description="获取小说的文风指纹统计数据"
@@ -88,7 +88,7 @@ def get_voice_fingerprint(
     novel_id: str = Path(..., description="小说 ID"),
     pov_character_id: Optional[str] = Query(None, description="POV 角色 ID"),
     service=Depends(get_voice_fingerprint_service)
-) -> VoiceFingerprintResponse:
+) -> Optional[VoiceFingerprintResponse]:
     """
     获取文风指纹
 
@@ -103,10 +103,7 @@ def get_voice_fingerprint(
     try:
         fingerprint = service.fingerprint_repo.get_by_novel(novel_id, pov_character_id)
         if not fingerprint:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Voice fingerprint not found for novel {novel_id}"
-            )
+            return None
 
         return VoiceFingerprintResponse(
             adjective_density=fingerprint["adjective_density"],
