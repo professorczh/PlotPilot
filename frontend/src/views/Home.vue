@@ -543,6 +543,12 @@ const handleCreate = async () => {
     const title = newBook.value.title || newBook.value.premise.substring(0, 20)
     const novelId = `novel-${Date.now()}`
 
+/** 打开提示词广场 */
+function openPromptPlaza() {
+  promptPlazaRef.value?.open()
+}
+
+
     const targetChapters = newBook.value.chapters || 100  // 始终使用用户输入或默认 100
     const payload = {
       novel_id: novelId,

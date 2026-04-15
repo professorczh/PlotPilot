@@ -10,7 +10,7 @@ function getStoredTheme(): ThemeMode {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === 'light' || stored === 'dark' || stored === 'anchor' || stored === 'auto') return stored
   } catch { /* ignore */ }
-  return 'light'
+  return 'anchor'
 }
 
 function getSystemDark(): boolean {

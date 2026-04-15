@@ -254,6 +254,11 @@ body {
   --stats-bar-gradient: linear-gradient(135deg, #141210 0%, #1c1812 25%, #201a12 50%, #161310 75%, #0e0c09 100%),
     linear-gradient(90deg, transparent 95%, rgba(212, 168, 67, 0.08) 100%);
 
+  /* 黑金模式头部组件额外适配 */
+  --tab-track-bg: linear-gradient(135deg, var(--color-brand), #8f741d);
+  --tab-active-color: #0a0c10;
+  --runtime-model-color: var(--color-gold);
+
   /* 黑金模式顶部栏额外装饰：金色底边线 */
   --stats-bar-border-bottom: 1px solid rgba(212, 168, 67, 0.18);
 
@@ -427,22 +432,22 @@ rt { font-size: 0.6em; color: var(--app-text-muted); }
 .global-llm-drawer-title { color: var(--app-text-primary); }
 .global-llm-drawer-subtitle { color: var(--app-text-muted); }
 .global-llm-runtime-bar {
-  background: var(--runtime-bar-bg);
-  border-color: var(--runtime-bar-border);
+  background: var(--runtime-bar-bg, var(--app-surface-subtle));
+  border-color: var(--runtime-bar-border, var(--app-border));
 }
-.global-llm-runtime-model { color: var(--runtime-model-color); font-weight: 800; }
-.global-llm-runtime-label { color: var(--app-text-muted); }
-.global-llm-runtime-name { color: var(--app-text-secondary); }
-.global-llm-runtime-chip {
-  background: var(--color-brand-light);
-  color: var(--color-brand);
+
+.global-llm-runtime-model {
+  color: var(--runtime-model-color, var(--color-brand));
+  font-weight: 800;
 }
+
 .global-llm-runtime-bar.is-mock {
-  background: var(--runtime-mock-bg);
-  border-color: var(--runtime-mock-border);
+  background: var(--runtime-mock-bg, var(--app-surface-raised));
+  border-color: var(--runtime-mock-border, var(--app-border-strong));
 }
+
 .global-llm-runtime-bar.is-mock .global-llm-runtime-model {
-  color: var(--runtime-mock-model-color);
+  color: var(--runtime-mock-model-color, var(--color-gold));
 }
 
 /* 嵌入模型区域 */

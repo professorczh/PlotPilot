@@ -88,6 +88,16 @@ async def list_models(payload: ModelListRequest) -> ModelListResponse:
             'x-api-key': api_key,
             'anthropic-version': '2023-06-01',
         }
+    elif api_format == 'gemini':
+        # --- PlotPilot Stability Patch: Gemini Connectivity ---
+        import os
+        os.environ["HTTPX_HTTP2"] = "0"
+        os.environ["HTTPS_PROXY"] = "socks5h://127.0.0.1:10808"
+        os.environ["HTTP_PROXY"] = "socks5h://127.0.0.1:10808"
+        # ---------------------------------------------------
+        actual_base = base_url or 'https://generativelanguage.googleapis.com/v1beta'
+        url = f"{actual_base.rstrip('/')}/models?key={api_key}"
+        headers = {'Content-Type': 'application/json'}
     else:
         url = f"{(base_url or 'https://api.openai.com/v1').rstrip('/')}/models"
         headers = {
