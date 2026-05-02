@@ -519,6 +519,7 @@ const charactersError = ref('')
 // 第3步：生成地点
 const generatingLocations = ref(false)
 const locationsGenerated = ref(false)
+const locationsError = ref('')
 const locationPollTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 /** 作废第 2/3 步后台轮询（关闭向导或重置时递增） */
