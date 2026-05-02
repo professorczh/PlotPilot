@@ -75,7 +75,8 @@ def _openai_compatible_models_base(base_url: str) -> str:
 def _normalize_model_items(data: Dict[str, Any]) -> List[ModelItem]:
     """将不同网关的 /models 响应统一为 ModelItem 列表。"""
     items: List[ModelItem] = []
-    raw_list = data.get('data', [])
+    # 兼容不同厂商的返回字段 (OpenAI 为 'data', Gemini 为 'models')
+    raw_list = data.get('data') or data.get('models', [])
     if not isinstance(raw_list, list):
         return items
     for entry in raw_list:
@@ -132,10 +133,12 @@ async def list_models(payload: ModelListRequest) -> ModelListResponse:
             try:
                 data = response.json()
             except json.JSONDecodeError:
+                # 安全处理：脱敏 URL 中的 API Key
+                safe_url = url.split('?')[0] if '?' in url else url
                 snippet = (response.text or '')[:240].replace('\n', ' ')
                 raise HTTPException(
                     status_code=502,
-                    detail=f'上游未返回 JSON（请检查 Base URL 与协议是否匹配 OpenAI 兼容）。请求 URL：{url}。片段：{snippet}',
+                    detail=f'上游未返回 JSON（请检查协议是否匹配）。请求 URL：{safe_url}。片段：{snippet}',
                 )
         normalized = _normalize_model_items(data)
         return ModelListResponse(
@@ -146,18 +149,21 @@ async def list_models(payload: ModelListRequest) -> ModelListResponse:
     except HTTPException:
         raise
     except httpx.HTTPStatusError as exc:
+        # 安全处理：脱敏 URL 中的 API Key
+        safe_url = url.split('?')[0] if '?' in url else url
         body = (exc.response.text or '')[:400].replace('\n', ' ')
         raise HTTPException(
             status_code=502,
-            detail=f'上游模型列表 HTTP {exc.response.status_code}：{body or exc.response.reason_phrase}（请求 {url}）',
+            detail=f'上游模型列表 HTTP {exc.response.status_code}：{body or exc.response.reason_phrase}（请求 {safe_url}）',
         ) from exc
     except httpx.RequestError as exc:
+        # 安全处理：脱敏 URL 中的 API Key
+        safe_url = url.split('?')[0] if '?' in url else url
         raise HTTPException(
             status_code=502,
             detail=(
-                f'连接上游失败：{exc}（请求 {url}）。'
-                '若日志里出现连向 127.0.0.1 某端口，多为系统 HTTP 代理注入导致 TLS 异常；'
-                '当前接口已禁用继承环境代理，请更新后端后重试。仍失败请检查本机防火墙/DNS。'
+                f'连接上游失败：{exc}（请求 {safe_url}）。'
+                '请检查网络、Base URL 或防火墙/DNS 设置。'
             ),
         ) from exc
     except Exception as exc:

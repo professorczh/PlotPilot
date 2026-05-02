@@ -35,6 +35,7 @@ class VertexAIProvider(BaseProvider):
     
     def __init__(self, settings: Settings):
         super().__init__(settings)
+        self.client = None
         if not HAS_GENAI:
             logger.error("google-genai SDK not installed. Please run 'pip install google-genai'")
             return
@@ -141,7 +142,9 @@ class VertexAIProvider(BaseProvider):
 
     def _ensure_sdk(self):
         if not HAS_GENAI:
-            raise ImportError("Please install 'google-genai' to use VertexAIProvider.")
+            raise ImportError("请运行 'pip install google-genai' 以安装 Vertex AI 所需的 SDK。")
+        if not self.client:
+            raise RuntimeError("Vertex AI 客户端未就绪。请检查 .env 中的 GCP_PROJECT_ID 和 GCP_REGION 配置。")
 
     def _get_resolved_model(self, config: GenerationConfig) -> str:
         model_id = require_resolved_model_id(

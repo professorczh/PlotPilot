@@ -326,6 +326,31 @@ import { worldbuildingApi } from '@/api/worldbuilding'
 import { workflowApi, type MainPlotOptionDTO } from '@/api/workflow'
 import BibleLocationsGraphPreview from './BibleLocationsGraphPreview.vue'
 
+// --- 图标组件 (SVG 手写版) ---
+const IconBook = () =>
+  h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em' },
+    h('path', { fill: 'currentColor', d: 'M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z' }))
+
+const IconPeople = () =>
+  h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em' },
+    h('path', { fill: 'currentColor', d: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z' }))
+
+const IconMap = () =>
+  h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em' },
+    h('path', { fill: 'currentColor', d: 'M20.5 3l-.16.03L15 5.1L9 3L3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1l5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z' }))
+
+const IconTimeline = () =>
+  h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em' },
+    h('path', { fill: 'currentColor', d: 'M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z' }))
+
+const IconChart = () =>
+  h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em' },
+    h('path', { fill: 'currentColor', d: 'M5 19h14v2H5zM19 17h2v-4h-2v4zM15 17h2V7h-2v10zM11 17h2v-7h-2v7zM7 17h2v-3H7v3zM3 17h2v-6H3v6z' }))
+
+const IconCheck = () =>
+  h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em' },
+    h('path', { fill: 'currentColor', d: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' }))
+
 const WB_DIMS = ['core_rules', 'geography', 'society', 'culture', 'daily_life'] as const
 
 function emptyWorldbuildingShape(): Record<(typeof WB_DIMS)[number], Record<string, string>> {
