@@ -95,12 +95,8 @@ class VertexAIProvider(BaseProvider):
             config=gen_config
         )
         
-        # 提取内容 (CodeRabbit: 处理安全拦截，防止 response.text 为空时崩溃)
-        candidate = response.candidates[0] if response.candidates else None
-        if candidate and candidate.finish_reason == "SAFETY":
-            raise ValueError("内容生成被 Vertex AI 安全过滤器拦截。请尝试修改输入或降低敏感度。")
-        
-        content = response.text or ""
+        # 提取内容 (CodeRabbit: 增加严格的空值与安全拦截防护)
+        content = self._get_response_text(response)
         
         # 提取 Token 使用量
         usage = getattr(response, 'usage_metadata', None)
@@ -143,6 +139,26 @@ class VertexAIProvider(BaseProvider):
             
             if chunk.text:
                 yield chunk.text
+
+    def _get_response_text(self, response: Any) -> str:
+        """安全地从响应对象中提取文本，处理被拦截或空响应的情况"""
+        if not response.candidates:
+            raise ValueError("Vertex AI 未返回任何候选结果。请检查输入是否包含违规内容。")
+            
+        candidate = response.candidates[0]
+        if candidate.finish_reason == "SAFETY":
+            raise ValueError("内容生成被 Vertex AI 安全过滤器拦截。请尝试修改输入或降低敏感度。")
+        elif candidate.finish_reason == "RECITATION":
+            raise ValueError("内容生成因涉及版权/引用限制被拦截。")
+        elif candidate.finish_reason != "STOP" and candidate.finish_reason != "MAX_TOKENS":
+            # 记录其他异常结束原因，但尝试返回已有文本
+            logger.warning(f"Vertex AI generation finished with unexpected reason: {candidate.finish_reason}")
+
+        try:
+            return response.text or ""
+        except (ValueError, AttributeError):
+            # 如果访问 .text 依然报错，说明该 candidate 确实不可读
+            return ""
 
     def _ensure_sdk(self):
         if not HAS_GENAI:
