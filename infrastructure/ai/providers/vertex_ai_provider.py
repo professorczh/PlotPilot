@@ -174,12 +174,18 @@ class VertexAIProvider(BaseProvider):
             "system_instruction": system_instruction.strip() if system_instruction and system_instruction.strip() else None
         }
         
-        # 针对 Gemini 3 的思维配置 (Thinking)
-        if "thinking_level" in eb:
-            # SDK 期望小写字符串: "low", "medium", "high"
-            level = str(eb["thinking_level"]).lower()
+        # 针对 Gemini 的思维配置 (Thinking)
+        if "thinking_level" in eb or "thinking_budget_tokens" in eb:
+            # 优先使用具体的 budget tokens，否则回退到 level
+            budget = eb.get("thinking_budget_tokens")
+            level = str(eb.get("thinking_level", "medium")).lower()
+            
             params["thinking_config"] = types.ThinkingConfig(
-                thinking_level=level
+                include_thoughts=True,
+                include_thoughts_in_response=True,
+                thinking_level=level if not budget else None,
+                # 如果用户指定了具体的 token 预算，则使用之
+                thinking_budget_tokens=int(budget) if budget else None
             )
             
         # 针对搜索工具的支持
