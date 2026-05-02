@@ -11,8 +11,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # 处理 Windows 终端编码问题
 if sys.platform == 'win32':
     import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    # CodeRabbit: 开启 line_buffering=True 确保日志在 CI/CD 或后台进程中能实时输出
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_buffering=True)
 
 print("=" * 60)
 print("使用 ModelScope 下载本地向量模型")
