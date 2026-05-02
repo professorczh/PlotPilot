@@ -257,8 +257,8 @@ body {
   --color-brand-hover: #ddb930;
   --color-brand-pressed: #a88a1f;
   --color-brand-suppl: #e8c84a;
-  --color-brand-light: rgba(201, 162, 39, 0.1);
-  --color-brand-border: rgba(201, 162, 39, 0.18);
+  --color-brand-light: rgba(201, 162, 39, 0.12);
+  --color-brand-border: rgba(201, 162, 39, 0.2);
 
   /* ── 黑金装饰色（更浓郁）── */
   --color-gold: #f0c866;
@@ -305,11 +305,6 @@ body {
   /* ── StatsTopBar 渐变（黑金版：墨黑金边）── */
   --stats-bar-gradient: linear-gradient(135deg, #16130f 0%, #1f1a13 50%, #2a2318 100%);
 
-  /* 黑金模式头部组件额外适配 */
-  --tab-track-bg: linear-gradient(135deg, var(--color-brand), #8f741d);
-  --tab-active-color: #0a0c10;
-  --runtime-model-color: var(--color-gold);
-
   /* 黑金模式顶部栏额外装饰：金色底边线 */
   --stats-bar-border-bottom: 1px solid rgba(212, 168, 67, 0.18);
 
@@ -321,68 +316,6 @@ body {
   --nav-hero-shadow: 0 1px 0 rgba(245, 215, 126, 0.12) inset;
 
   color-scheme: dark;
-}
-
-/* ═══════════════════════════════════════════════════
-   墨枢模式 (Ink) — 极致玄墨纯净
-   ═══════════════════════════════════════════════════ */
-[data-theme='ink'] {
-  --color-brand: #DC2626;
-  --color-brand-hover: #ef4444;
-  --color-brand-pressed: #b91c1c;
-  --color-brand-suppl: #fca5a5;
-  
-  --app-text-primary: #ffffff;
-  --app-text-secondary: #a3a3a3;
-  --app-text-muted: #737373;
-  --app-text-inverse: #0F0F0F;
-
-  --color-brand-light: rgba(220, 38, 38, 0.12);
-  --color-brand-border: rgba(220, 38, 38, 0.2);
-
-  --app-page-bg: #0F0F0F;
-  --app-surface: #171717;
-  --app-surface-raised: #262626;
-  --app-surface-subtle: #121212;
-  --app-input-bg: #121212;
-
-  --app-border: rgba(255, 255, 255, 0.08);
-  --app-border-strong: rgba(255, 255, 255, 0.15);
-  --app-divider: rgba(255, 255, 255, 0.05);
-
-  --stats-bar-gradient: linear-gradient(135deg, #0a0a0a 0%, #171717 100%);
-  color-scheme: dark;
-}
-
-/* ═══════════════════════════════════════════════════
-   朱砂模式 (Cinnabar) — 宣纸朱文书香
-   ═══════════════════════════════════════════════════ */
-[data-theme='cinnabar'] {
-  --color-brand: #DC2626;
-  --color-brand-hover: #ef4444;
-  --color-brand-pressed: #b91c1c;
-  --color-brand-suppl: #fca5a5;
-
-  --app-text-primary: #1A1A1A;
-  --app-text-secondary: #525252;
-  --app-text-muted: #737373;
-  --app-text-inverse: #ffffff;
-
-  --color-brand-light: rgba(220, 38, 38, 0.05);
-  --color-brand-border: rgba(220, 38, 38, 0.1);
-
-  --app-page-bg: #F4F1EA;
-  --app-surface: #ffffff;
-  --app-surface-raised: #ffffff;
-  --app-surface-subtle: #faf9f6;
-  --app-input-bg: #ffffff;
-
-  --app-border: rgba(0, 0, 0, 0.08);
-  --app-border-strong: rgba(0, 0, 0, 0.15);
-  --app-divider: rgba(0, 0, 0, 0.05);
-
-  --stats-bar-gradient: linear-gradient(135deg, #fdfcf8 0%, #f4f1ea 100%);
-  color-scheme: light;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -552,22 +485,22 @@ rt { font-size: 0.6em; color: var(--app-text-muted); }
 .global-llm-drawer-title { color: var(--app-text-primary); }
 .global-llm-drawer-subtitle { color: var(--app-text-muted); }
 .global-llm-runtime-bar {
-  background: var(--runtime-bar-bg, var(--app-surface-subtle));
-  border-color: var(--runtime-bar-border, var(--app-border));
+  background: var(--runtime-bar-bg);
+  border-color: var(--runtime-bar-border);
 }
-
-.global-llm-runtime-model {
-  color: var(--runtime-model-color, var(--color-brand));
-  font-weight: 800;
+.global-llm-runtime-model { color: var(--runtime-model-color); font-weight: 800; }
+.global-llm-runtime-label { color: var(--app-text-muted); }
+.global-llm-runtime-name { color: var(--app-text-secondary); }
+.global-llm-runtime-chip {
+  background: var(--color-brand-light);
+  color: var(--color-brand);
 }
-
 .global-llm-runtime-bar.is-mock {
-  background: var(--runtime-mock-bg, var(--app-surface-raised));
-  border-color: var(--runtime-mock-border, var(--app-border-strong));
+  background: var(--runtime-mock-bg);
+  border-color: var(--runtime-mock-border);
 }
-
 .global-llm-runtime-bar.is-mock .global-llm-runtime-model {
-  color: var(--runtime-mock-model-color, var(--color-gold));
+  color: var(--runtime-mock-model-color);
 }
 
 /* 嵌入模型区域 */

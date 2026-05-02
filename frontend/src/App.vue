@@ -1,22 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { NConfigProvider, NMessageProvider, NDialogProvider, NLayout, zhCN, dateZhCN, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, zhCN, dateZhCN, darkTheme } from 'naive-ui'
+import type { GlobalThemeOverrides } from 'naive-ui'
 import { useThemeStore } from './stores/themeStore'
 
 const themeStore = useThemeStore()
-const route = useRoute()
 
 const naiveTheme = computed(() =>
   themeStore.isDark ? darkTheme : undefined
 )
-
-// Determine if we are in the Renaissance isolation zone
-const isRenaissance = computed(() => {
-  return themeStore.mode === 'ink' || 
-         themeStore.mode === 'cinnabar' ||
-         route.path.startsWith('/renaissance/')
-})
 
 // ─── 静态调色板（不随主题变化，提升出来避免 computed 重建字符串）─────────────
 const LIGHT_PALETTE = {
@@ -153,41 +145,17 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
   >
     <n-message-provider>
       <n-dialog-provider>
-        <div class="app-container">
-          <!-- 🏹 文艺复兴隔离区 (Renaissance District) -->
-          <template v-if="isRenaissance">
-            <router-view v-slot="{ Component }">
-              <transition name="app-fade" mode="out-in">
-                <component :is="Component" />
-              </transition>
-            </router-view>
-          </template>
-
-          <!-- 🛡️ 作者原始布局 (Original Baseline) -->
-          <template v-else>
-            <router-view v-slot="{ Component }">
-              <transition name="app-fade" mode="out-in">
-                <component :is="Component" />
-              </transition>
-            </router-view>
-          </template>
-        </div>
+        <router-view v-slot="{ Component }">
+          <transition name="app-fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </n-dialog-provider>
     </n-message-provider>
   </n-config-provider>
 </template>
 
 <style>
-.app-container {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-}
-
-.app-layout {
-  height: 100%;
-}
-
 .app-fade-enter-active,
 .app-fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
