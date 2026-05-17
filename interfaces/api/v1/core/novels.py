@@ -266,6 +266,7 @@ async def generate_bible_alias(
     novel_id: str,
     background_tasks: BackgroundTasks,
     stage: str = "all",
+    service: NovelService = Depends(get_novel_service),
     bible_generator: AutoBibleGenerator = Depends(get_auto_bible_generator),
     knowledge_generator: AutoKnowledgeGenerator = Depends(get_auto_knowledge_generator)
 ):
@@ -289,9 +290,19 @@ async def generate_bible_alias(
                     stage=stage
                 )
                 if knowledge_generator and stage in ("all", "worldbuilding"):
+                    novel = service.get_novel(novel_id)
+                    title = novel.title if novel else ""
+                    
+                    chars = bible_data.get("characters", [])
+                    locs = bible_data.get("locations", [])
+                    char_desc = "、".join(f"{c['name']}（{c.get('role', '')}）" for c in chars[:5])
+                    loc_desc = "、".join(c['name'] for c in locs[:3])
+                    bible_summary = f"主要角色：{char_desc}。重要地点：{loc_desc}。文风：{bible_data.get('style', '')}。"
+
                     await knowledge_generator.generate_and_save(
                         novel_id=novel_id,
-                        bible_data=bible_data
+                        title=title,
+                        bible_summary=bible_summary
                     )
             except Exception as e:
                 logger.error(f"Failed to generate Bible/Knowledge for {novel_id}: {e}")
@@ -328,7 +339,15 @@ async def update_auto_approve_mode(
         HTTPException: 如果小说不存在
     """
     try:
-        return service.update_auto_approve_mode(novel_id, request.auto_approve_mode)
+        dto = service.update_auto_approve_mode(novel_id, request.auto_approve_mode)
+        try:
+            from interfaces.main import update_shared_novel_state
+            update_shared_novel_state(novel_id, auto_approve_mode=request.auto_approve_mode)
+        except Exception as e:
+            # 共享内存同步失败不应该阻塞主流程，做警告记录即可
+            import logging
+            logging.getLogger(__name__).warning("Failed to sync auto_approve_mode to shared memory: %s", e)
+        return dto
     except EntityNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

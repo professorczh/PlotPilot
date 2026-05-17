@@ -186,7 +186,7 @@ class QueryService:
             manuscript_chapters=completed_chapters,
             progress_pct_manuscript=round(progress_pct, 1),
             current_chapter_number=current_chapter_number,
-            needs_review=state.needs_review,
+            needs_review=(state.current_stage == "paused_for_review"),
             auto_approve_mode=state.auto_approve_mode,
             last_chapter_audit=None,  # 需要单独存储
             audit_progress=None,
@@ -232,7 +232,7 @@ class QueryService:
             manuscript_chapters=completed_chapters,
             progress_pct_manuscript=round(progress_pct, 1),
             current_chapter_number=current_chapter_number,
-            needs_review=raw_data.get("needs_review", False),
+            needs_review=(raw_data.get("current_stage") == "paused_for_review"),
             auto_approve_mode=raw_data.get("auto_approve_mode", False),
             last_chapter_audit=None,
             audit_progress=raw_data.get("audit_progress"),

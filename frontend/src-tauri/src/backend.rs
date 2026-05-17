@@ -23,6 +23,11 @@ use std::os::windows::process::CommandExt;
 #[cfg(target_os = "windows")]
 use win32job::Job;
 
+#[cfg(target_os = "windows")]
+const BACKEND_EXE_NAME: &str = "plotpilot-backend.exe";
+#[cfg(not(target_os = "windows"))]
+const BACKEND_EXE_NAME: &str = "plotpilot-backend";
+
 /// 子进程若使用 `Stdio::piped()`，父进程必须持续读取，否则管道缓冲区满后子进程会在下一次写日志时**永久阻塞**。
 /// 开发版多在终端直接 `uvicorn`（输出到控制台，无管道）；安装包由 Tauri `spawn` 且此前未消费管道，**挂一晚上日志一多就会整后端假死**，表现成「只有安装包会坏」。
 fn spawn_stdio_drainers(mut child: Child) -> Child {
@@ -128,11 +133,12 @@ impl BackendManager {
         Ok(())
     }
 
-    /// PyInstaller onedir：`$RESOURCE/plotpilot-backend/plotpilot-backend.exe`（见 tauri.conf resources 映射）
+    /// PyInstaller onedir：`$RESOURCE/plotpilot-backend/` 下的冻结产物（见 tauri.conf resources 映射）
     fn find_frozen_backend_exe(handle: &AppHandle) -> Option<PathBuf> {
+        let path_1a = format!("plotpilot-backend/{}", BACKEND_EXE_NAME);
         // 方案 1a：与 bundle.resources 映射一致（推荐；安装包与 tauri build 均可用）
         if let Ok(p) = handle.path().resolve(
-            "plotpilot-backend/plotpilot-backend.exe",
+            &path_1a,
             BaseDirectory::Resource,
         ) {
             if p.is_file() {
@@ -141,9 +147,10 @@ impl BackendManager {
             }
         }
 
+        let path_1b = format!("../../out/tauri/plotpilot-backend/{}", BACKEND_EXE_NAME);
         // 方案 1b：旧配置曾用数组 + `../**/*`，打包后实际路径经 Tauri 归一化；用同一字符串解析
         if let Ok(p) = handle.path().resolve(
-            "../../out/tauri/plotpilot-backend/plotpilot-backend.exe",
+            &path_1b,
             BaseDirectory::Resource,
         ) {
             if p.is_file() {
@@ -154,12 +161,12 @@ impl BackendManager {
 
         // 方案 1c：resource_dir 下直接探测（手工拷贝或扁平布局）
         if let Ok(rd) = handle.path().resource_dir() {
-            let nested = rd.join("plotpilot-backend").join("plotpilot-backend.exe");
+            let nested = rd.join("plotpilot-backend").join(BACKEND_EXE_NAME);
             if nested.is_file() {
                 log::info!("📦 后端路径 (resource_dir nested): {}", nested.display());
                 return Some(nested);
             }
-            let flat = rd.join("plotpilot-backend.exe");
+            let flat = rd.join(BACKEND_EXE_NAME);
             if flat.is_file() {
                 log::info!("📦 后端路径 (resource_dir flat): {}", flat.display());
                 return Some(flat);
@@ -175,7 +182,7 @@ impl BackendManager {
                     .join("out")
                     .join("tauri")
                     .join("plotpilot-backend")
-                    .join("plotpilot-backend.exe");
+                    .join(BACKEND_EXE_NAME);
                 if candidate.is_file() {
                     log::info!("📦 后端路径 (dev walk-up): {}", candidate.display());
                     return Some(candidate);
@@ -187,7 +194,7 @@ impl BackendManager {
             if let Some(parent) = exe_path.parent() {
                 let sibling = parent
                     .join("plotpilot-backend")
-                    .join("plotpilot-backend.exe");
+                    .join(BACKEND_EXE_NAME);
                 if sibling.is_file() {
                     log::info!("📦 后端路径 (sibling dir): {}", sibling.display());
                     return Some(sibling);
@@ -274,7 +281,11 @@ impl BackendManager {
         }
 
         // 4) 虚拟环境
-        let venv = self.project_root.join(".venv/Scripts/python.exe");
+        let venv = if cfg!(target_os = "windows") {
+            self.project_root.join(".venv/Scripts/python.exe")
+        } else {
+            self.project_root.join(".venv/bin/python")
+        };
         if venv.exists() {
             log::info!("🐍 使用虚拟环境 Python: {}", venv.display());
             return Some(venv);
@@ -328,7 +339,7 @@ impl BackendManager {
             c
         } else {
             let python = self.find_python().ok_or_else(|| {
-                "未找到 plotpilot-backend.exe，也未找到 Python。发布构建请运行 scripts/build_backend_pyinstaller.py；开发请安装 Python 3.10+".to_string()
+                format!("未找到 {}，也未找到 Python。发布构建请运行相应打包脚本；开发请安装 Python 3.10+", BACKEND_EXE_NAME)
             })?;
             log::info!("🐍 启动 uvicorn（解释器）: {}", python.display());
             let mut c = Command::new(&python);

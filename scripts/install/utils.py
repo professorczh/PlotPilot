@@ -54,10 +54,13 @@ def get_proj_dir():
 
 
 def get_venv_python(proj_dir=None):
-    """返回虚拟环境 python.exe 路径，不存在则返回 None"""
+    """返回虚拟环境 python.exe/python 路径，不存在则返回 None"""
     if proj_dir is None:
         proj_dir = get_proj_dir()
-    p = os.path.join(proj_dir, ".venv", "Scripts", "python.exe")
+    if os.name == "nt":
+        p = os.path.join(proj_dir, ".venv", "Scripts", "python.exe")
+    else:
+        p = os.path.join(proj_dir, ".venv", "bin", "python")
     return p if os.path.exists(p) else None
 
 

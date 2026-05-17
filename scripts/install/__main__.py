@@ -8,6 +8,7 @@ PyInstaller 真正的入口文件。
 
 import sys
 import os
+import tempfile
 
 
 def main():
@@ -52,15 +53,14 @@ def main():
             for candidate in [
                 os.path.join(install_dir, "..", "..", "..", "logs"),
                 os.path.join(os.path.dirname(sys.executable), "..", "..", "logs"),
-                "C:\\temp",
+                tempfile.gettempdir(),
             ]:
                 c = os.path.abspath(candidate)
                 if os.path.isdir(c):
                     log_dir = c
                     break
             else:
-                os.makedirs("C:\\temp", exist_ok=True)
-                log_dir = "C:\\temp"
+                log_dir = tempfile.gettempdir()
 
         log_file = os.path.join(log_dir, "bootstrap_debug.log")
         with open(log_file, "w", encoding="utf-8") as dbg:
@@ -89,7 +89,8 @@ def main():
             pass
         # 也尝试写到一个绝对确定能写的位置
         try:
-            with open(r"C:\temp\plotpilot_exec_crash.log", "w", encoding="utf-8") as f:
+            crash_file = os.path.join(tempfile.gettempdir(), "plotpilot_exec_crash.log")
+            with open(crash_file, "w", encoding="utf-8") as f:
                 f.write(f"Error: {e}\n\n{tb}\n")
         except Exception:
             pass

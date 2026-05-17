@@ -556,7 +556,6 @@ class BibleService:
         """
         import logging
         _log = logging.getLogger(__name__)
-
         try:
             from application.paths import get_db_path
             from infrastructure.persistence.database.story_node_repository import StoryNodeRepository
@@ -567,21 +566,65 @@ class BibleService:
                 new_name = (getattr(char_data, "name", None) or "").strip()
                 old_name = (prev_name_by_id.get(cid) or "").strip()
                 if old_name and new_name and old_name != new_name:
-                    renames.append((old_name, new_name))
+                    renames.append((cid, old_name, new_name))
 
             if not renames:
                 return
 
             repo = StoryNodeRepository(str(get_db_path()))
-            for old_name, new_name in renames:
+            from infrastructure.persistence.database.connection import get_database
+            conn = get_database(str(get_db_path())).get_connection()
+            cursor = conn.cursor()
+
+            for cid, old_name, new_name in renames:
                 affected = repo.bulk_replace_text_sync(novel_id, old_name, new_name)
                 if affected:
                     _log.info(
                         "story_nodes 人名替换：novel=%s %s → %s，影响 %d 行",
                         novel_id, old_name, new_name, affected,
                     )
+
+                # 1. Update triples where subject_entity_id matches cid
+                cursor.execute(
+                    "UPDATE triples SET subject = ? WHERE novel_id = ? AND subject_entity_id = ?",
+                    (new_name, novel_id, cid)
+                )
+                affected_triples_sub_id = cursor.rowcount
+
+                # 2. Update triples where object_entity_id matches cid
+                cursor.execute(
+                    "UPDATE triples SET object = ? WHERE novel_id = ? AND object_entity_id = ?",
+                    (new_name, novel_id, cid)
+                )
+                affected_triples_obj_id = cursor.rowcount
+
+                # 3. Update triples where subject matches old_name and entity_id is null/empty
+                cursor.execute(
+                    "UPDATE triples SET subject = ? WHERE novel_id = ? AND subject = ? AND (subject_entity_id IS NULL OR subject_entity_id = '')",
+                    (new_name, novel_id, old_name)
+                )
+                affected_triples_sub_name = cursor.rowcount
+
+                # 4. Update triples where object matches old_name and entity_id is null/empty
+                cursor.execute(
+                    "UPDATE triples SET object = ? WHERE novel_id = ? AND object = ? AND (object_entity_id IS NULL OR object_entity_id = '')",
+                    (new_name, novel_id, old_name)
+                )
+                affected_triples_obj_name = cursor.rowcount
+
+                total_affected_triples = (
+                    affected_triples_sub_id + affected_triples_obj_id +
+                    affected_triples_sub_name + affected_triples_obj_name
+                )
+
+                if total_affected_triples > 0:
+                    _log.info(
+                        "triples 人名替换：novel=%s %s → %s，影响 %d 行三元组",
+                        novel_id, old_name, new_name, total_affected_triples,
+                    )
+            conn.commit()
         except Exception as exc:
             import logging as _logging
             _logging.getLogger(__name__).warning(
-                "story_nodes 人名替换失败（不影响主流程）: %s", exc
+                "story_nodes / triples 人名替换失败（不影响主流程）: %s", exc
             )

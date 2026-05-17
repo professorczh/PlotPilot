@@ -1055,6 +1055,10 @@ class StartRequest(BaseModel):
         le=CHAPTER_TARGET_WORDS_MAX,
         description="每章目标字数（与 chapter_target_limits 上限对齐）",
     )
+    auto_approve_mode: Optional[bool] = Field(
+        default=None,
+        description="是否开启全自动审批模式（跳过所有人工确认阶段）",
+    )
 
 
 @router.post("/{novel_id}/start")
@@ -1062,9 +1066,9 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
     """启动自动驾驶（共享内存先行；目标章数字数原子落库后再发 IPC，避免与 PUT 竞态）。
 
     架构：
-    1. 解析当前阶段并合并本次请求的 target_chapters / target_words_per_chapter（可选）。
+    1. 解析当前阶段并合并本次请求 of target_chapters / target_words_per_chapter（可选）。
     2. 立即写入共享内存（含目标字数，供 /status 与前端进度条）。
-    3. await 线程池中的 DB 持久化（RUNNING + 目标字段），再发布 IPC —— 守护进程下一轮读 DB 即可拿到正确每章字数。
+    3. await 线程池中的 DB 持久化（RUNNING + 目标字段），再发布 IPC ── 守护进程下一轮读 DB 即可拿到正确每章字数。
     """
     loop = asyncio.get_running_loop()
 
@@ -1074,6 +1078,7 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
     current_chapter_in_act = 0
     resolved_tc = 1
     resolved_twpc = 2500
+    resolved_auto_approve = False
     current_stage_str = "macro_planning"
 
     shared = _get_shared_state_for_novel(novel_id)
@@ -1084,6 +1089,7 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
         current_chapter_in_act = shared.get("current_chapter_in_act", 0) or 0
         resolved_tc = int(shared.get("target_chapters", 1) or 1)
         resolved_twpc = int(shared.get("target_words_per_chapter") or 2500)
+        resolved_auto_approve = bool(shared.get("auto_approve_mode", False))
 
         # 计算下一阶段
         fresh_stages = {"planning", "macro_planning"}
@@ -1110,6 +1116,7 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
                 "current_chapter_in_act": n.current_chapter_in_act or 0,
                 "target_chapters": n.target_chapters or 1,
                 "target_words_per_chapter": getattr(n, "target_words_per_chapter", None) or 2500,
+                "auto_approve_mode": bool(getattr(n, "auto_approve_mode", False)),
             }
 
         try:
@@ -1128,6 +1135,7 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
         current_chapter_in_act = novel_data["current_chapter_in_act"]
         resolved_tc = int(novel_data["target_chapters"])
         resolved_twpc = int(novel_data.get("target_words_per_chapter") or 2500)
+        resolved_auto_approve = bool(novel_data.get("auto_approve_mode", False))
 
         fresh_stages = {"planning", "macro_planning"}
         if current_stage_str in fresh_stages:
@@ -1144,6 +1152,8 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
         resolved_tc = _clamp_autopilot_target_chapters(body.target_chapters)
     if body.target_words_per_chapter is not None:
         resolved_twpc = _clamp_autopilot_words_per_chapter(body.target_words_per_chapter)
+    if body.auto_approve_mode is not None:
+        resolved_auto_approve = body.auto_approve_mode
 
     # ── 第二步：立即写入共享内存（前端立即可见）──
     try:
@@ -1157,8 +1167,9 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
             consecutive_error_count=0,
             target_chapters=resolved_tc,
             target_words_per_chapter=resolved_twpc,
+            auto_approve_mode=resolved_auto_approve,
         )
-        logger.debug("autopilot start: 已刷新共享内存状态 novel=%s", novel_id)
+        logger.debug("autopilot start: 已刷新共享内存状态 novel=%s, auto_approve_mode=%s", novel_id, resolved_auto_approve)
     except Exception as e:
         logger.debug("刷新共享内存失败（可忽略）: %s", e)
 
@@ -1176,6 +1187,8 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
             novel.consecutive_error_count = 0
             novel.target_chapters = resolved_tc
             novel.target_words_per_chapter = resolved_twpc
+            if body.auto_approve_mode is not None:
+                novel.auto_approve_mode = body.auto_approve_mode
 
             fresh_stages_obj = {NovelStage.PLANNING, NovelStage.MACRO_PLANNING}
             if novel.current_stage in fresh_stages_obj:
@@ -1185,10 +1198,11 @@ async def start_autopilot(novel_id: str, body: StartRequest = StartRequest()):
 
             repo.save(novel)
             logger.info(
-                "autopilot start: novel_id=%s persisted RUNNING (DB) tc=%s twpc=%s",
+                "autopilot start: novel_id=%s persisted RUNNING (DB) tc=%s twpc=%s, auto_approve_mode=%s",
                 novel_id,
                 resolved_tc,
                 resolved_twpc,
+                novel.auto_approve_mode,
             )
         except Exception as e:
             logger.warning("autopilot start DB 持久化失败（共享内存已生效）: %s", e)

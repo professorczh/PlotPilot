@@ -189,6 +189,9 @@ class GeminiProvider(BaseProvider):
                     schema = fmt.get("json_schema", {}).get("schema")
                     if schema:
                         generation_config["responseSchema"] = schema
+            elif isinstance(fmt, type) and issubclass(fmt, BaseModel):
+                generation_config["responseMimeType"] = "application/json"
+                generation_config["responseSchema"] = self._to_gemini_schema(fmt)
 
         payload: dict[str, Any] = {
             'contents': [
@@ -215,6 +218,35 @@ class GeminiProvider(BaseProvider):
             payload['generationConfig'].update(generation_override)
         payload.update(extra_body)
         return payload
+
+    def _to_gemini_schema(self, model_cls: Type[BaseModel]) -> dict[str, Any]:
+        """Convert a Pydantic model to a clean, dereferenced OpenAPI-compatible schema for Gemini."""
+        raw_schema = model_cls.model_json_schema()
+        defs = raw_schema.pop("$defs", {}) or raw_schema.pop("definitions", {}) or {}
+        
+        def _clean(node: Any) -> Any:
+            if isinstance(node, dict):
+                if "$ref" in node:
+                    ref_path = node["$ref"]
+                    ref_key = ref_path.split("/")[-1]
+                    if ref_key in defs:
+                        resolved = _clean(defs[ref_key])
+                        merged = {k: v for k, v in node.items() if k != "$ref"}
+                        merged.update(resolved)
+                        node = merged
+                
+                cleaned = {}
+                for k, v in node.items():
+                    if k in ("title", "default", "additionalProperties", "serialization_alias", "validation_alias"):
+                        continue
+                    cleaned[k] = _clean(v)
+                return cleaned
+            elif isinstance(node, list):
+                return [_clean(item) for item in node]
+            return node
+
+        return _clean(raw_schema)
+
 
     def _extract_text(self, data: dict[str, Any]) -> str:
         pieces: list[str] = []

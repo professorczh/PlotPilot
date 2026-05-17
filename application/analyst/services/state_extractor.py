@@ -8,7 +8,9 @@ from application.ai.chapter_state_llm_contract import (
     chapter_state_payload_to_domain,
     empty_chapter_state,
     parse_chapter_state_llm_response,
+    ChapterStateLlmPayload,
 )
+from application.ai.structured_json_pipeline import structured_json_generate
 
 logger = logging.getLogger(__name__)
 
@@ -37,23 +39,24 @@ class StateExtractor:
         system_prompt, user_prompt = self._build_extraction_prompt(content)
         prompt = Prompt(system=system_prompt, user=user_prompt)
 
-        # 配置 LLM
+        # 配置 LLM 并强制指定 JSON schema
         config = GenerationConfig(
             model=os.getenv("WRITING_MODEL", ""),
             max_tokens=4096,
-            temperature=0.3
+            temperature=0.3,
+            response_format=ChapterStateLlmPayload,
         )
 
-        # 调用 LLM 生成
-        result = await self.llm_service.generate(prompt=prompt, config=config)
-        raw_response = result.content
-        logger.debug(f"StateExtractor LLM raw response (first 500 chars): {raw_response[:500]}")
+        payload = await structured_json_generate(
+            llm=self.llm_service,
+            prompt=prompt,
+            config=config,
+            schema_model=ChapterStateLlmPayload,
+        )
 
-        payload, errors = parse_chapter_state_llm_response(raw_response)
         if payload is None:
             logger.warning(
-                "StateExtractor: LLM 输出未通过契约校验: %s",
-                "; ".join(errors) if errors else "unknown",
+                "StateExtractor: LLM 输出结构化生成失败，返回安全空值。"
             )
             chapter_state = empty_chapter_state()
         else:

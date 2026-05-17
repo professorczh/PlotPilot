@@ -1527,9 +1527,10 @@ class AutoNovelGenerationWorkflow:
 
         if "人名硬约束" not in system_message:
             system_message = system_message.rstrip() + (
-                "\n\n【人名硬约束】上下文人物设定（Bible）中的姓名为唯一正典。"
+                "\n\n【人名硬约束】上下文人物设定（Bible）与三元组（Triples）中的姓名为唯一正典。"
+                "正文中出现的角色名称必须与三元组和 Bible 中的角色名称完全一致，不得使用任何变体、旧稿占位名或混淆的名字。"
                 "若本章大纲、故事线摘要或节拍说明中出现不同的人名（含旧稿占位名），"
-                "正文必须以 Bible 为准统一使用 Bible 姓名，不得继续使用大纲里的占位名。\n"
+                "正文必须以 Bible/三元组 为准统一姓名，绝不能出现偏离或创造新的不一致姓名。\n"
             )
 
         user_message = _safe_format(user_template, {"outline": outline, "beat_section": ""})

@@ -54,7 +54,7 @@ class LlmInitialKnowledgePayload(BaseModel):
 # ---------------------------------------------------------------------------
 
 # CPMS: 提示词节点 key（对应 prompts_extraction.json 中的条目）
-_KNOWLEDGE_NODE_KEY = "initial-knowledge-extraction"
+_KNOWLEDGE_NODE_KEY = "knowledge-initial"
 
 # 硬编码回退（仅在 PromptRegistry 不可用时使用）
 _FALLBACK_INITIAL_KNOWLEDGE_SYSTEM = """你是专业的小说知识图谱构建助手。根据小说标题和设定，生成核心知识。

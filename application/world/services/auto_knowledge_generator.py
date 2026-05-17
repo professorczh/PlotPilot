@@ -7,7 +7,9 @@ from application.ai.knowledge_llm_contract import (
     build_initial_knowledge_system_prompt,
     parse_initial_knowledge_llm_response,
     to_knowledge_service_update_dict,
+    LlmInitialKnowledgePayload,
 )
+from application.ai.structured_json_pipeline import structured_json_generate
 from application.world.services.knowledge_service import KnowledgeService
 
 logger = logging.getLogger(__name__)
@@ -62,15 +64,22 @@ class AutoKnowledgeGenerator:
         user_prompt = f"小说标题：《{title}》{context_section}"
 
         prompt = Prompt(system=system_prompt, user=user_prompt)
-        config = GenerationConfig(max_tokens=2048, temperature=0.4)
+        config = GenerationConfig(
+            max_tokens=2048,
+            temperature=0.4,
+            response_format=LlmInitialKnowledgePayload,
+        )
 
-        result = await self.llm_service.generate(prompt, config)
+        payload = await structured_json_generate(
+            llm=self.llm_service,
+            prompt=prompt,
+            config=config,
+            schema_model=LlmInitialKnowledgePayload,
+        )
 
-        payload, errors = parse_initial_knowledge_llm_response(result.content)
         if payload is None:
             logger.warning(
-                "AutoKnowledgeGenerator: LLM 输出未通过契约校验: %s",
-                "; ".join(errors) if errors else "unknown",
+                "AutoKnowledgeGenerator: LLM 输出结构化生成失败，返回安全空值。"
             )
             return {
                 "version": 1,

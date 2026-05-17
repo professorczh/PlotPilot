@@ -315,7 +315,7 @@ let lastStatusPollIntervalMs = -1
 
 // 计算属性
 const isRunning = computed(() => status.value?.autopilot_status === 'running')
-const needsReview = computed(() => status.value?.needs_review === true)
+const needsReview = computed(() => status.value?.needs_review === true || status.value?.current_stage === 'paused_for_review')
 // 🔥 只有运行中且阶段为 writing 时才是真正的"撰写中"
 const isWriting = computed(() =>
   status.value?.autopilot_status === 'running' && status.value?.current_stage === 'writing'
@@ -871,6 +871,7 @@ async function start() {
           max_auto_chapters: startConfig.value.max_auto_chapters,
           target_chapters: newTarget,
           target_words_per_chapter: newWpc,
+          auto_approve_mode: newAutoApprove,
         }),
       }).then(res => {
         if (!res.ok) {

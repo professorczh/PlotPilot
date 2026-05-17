@@ -8,3 +8,19 @@
   - 每项精确包含: id, subject, predicate, object, note
   - id 遵循规范，如 fact-001
   - 提取 5～10 条。必须是铁律设定，拒绝模棱两可的猜测。
+
+**输出 JSON 模板格式（只允许包含这两个根字段，不要包含任何多余字段）：**
+```json
+{
+  "premise_lock": "这里写一句话核心梗概",
+  "facts": [
+    {
+      "id": "fact-001",
+      "subject": "沈清荷",
+      "predicate": "继女",
+      "object": "褚卫国",
+      "note": "继父女关系"
+    }
+  ]
+}
+```

@@ -289,7 +289,11 @@ async def llm_chapter_extract_bundle(
     user = f"第 {chapter_number} 章正文如下：\n\n{body}"
 
     prompt = Prompt(system=system, user=user)
-    config = GenerationConfig(max_tokens=4096, temperature=0.45)
+    config = GenerationConfig(
+        max_tokens=4096,
+        temperature=0.45,
+        response_format={"type": "json_object"},
+    )
 
     result = await llm.generate(prompt, config)
     raw = result.content if hasattr(result, "content") else str(result)

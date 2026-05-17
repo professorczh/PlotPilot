@@ -529,7 +529,7 @@
     </div>
 
     <template #footer>
-      <n-space justify="space-between">
+      <n-space justify="space-between" style="width: 100%">
         <n-space>
           <n-button v-if="currentStep > 1 && currentStep < 5" @click="handlePrev">
             上一步
@@ -1131,7 +1131,7 @@ function pollBibleUntil(
   const tick = async () => {
     if (options.isStale()) return
     try {
-      const bible = await bibleApi.getBible(props.novelId)
+      const bible = await bibleApi.getBible(props.novelId, { silentGlobalFeedback: true })
       if (options.isStale()) return
       bibleData.value = bible
       if (predicate(bible)) { options.onSuccess(); return }
@@ -1642,7 +1642,7 @@ function resetWizardStateForOpen() {
 
 async function detectWizardProgress(): Promise<number> {
   try {
-    const bible = await bibleApi.getBible(props.novelId)
+    const bible = await bibleApi.getBible(props.novelId, { silentGlobalFeedback: true })
     bibleData.value = bible
 
     let fromApi = emptyWorldbuildingShape()
