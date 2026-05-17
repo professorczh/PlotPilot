@@ -185,6 +185,7 @@ import PromptPlazaEntryButton from '@/components/global/PromptPlazaEntryButton.v
 const emit = defineEmits<{
   (e: 'create-book'): void
   (e: 'refresh-list'): void
+  (e: 'open-settings'): void
   (e: 'collapsed-change', collapsed: boolean): void
 }>()
 
