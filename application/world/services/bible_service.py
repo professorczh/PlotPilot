@@ -394,6 +394,7 @@ class BibleService:
         # 记录改名前的 id→name 映射，用于 save 后同步刷新 story_nodes
         prev_name_by_id = {c.character_id.value: c.name for c in bible.characters}
         prev_chars = {c.character_id.value: c for c in bible.characters}
+        prev_loc_name_by_id = {l.id: l.name for l in bible.locations}
 
         # 清空现有数据
         bible._characters = []
@@ -535,6 +536,13 @@ class BibleService:
         self.bible_repository.save(bible)
         self._sync_location_triples(novel_id, bible)
 
+        new_char_ids = {c.id for c in characters}
+        new_loc_ids = {l.id for l in locations}
+        deleted_char_ids = set(prev_name_by_id.keys()) - new_char_ids
+        deleted_loc_ids = set(prev_loc_name_by_id.keys()) - new_loc_ids
+        
+        self._cleanup_orphaned_triples(novel_id, deleted_char_ids, deleted_loc_ids, prev_name_by_id, prev_loc_name_by_id)
+
         # 批量刷新结构节点里的旧人名（改名后大纲仍用旧名会导致生成时出现旧名）
         self._propagate_character_renames(novel_id, prev_name_by_id, characters)
 
@@ -627,4 +635,68 @@ class BibleService:
             import logging as _logging
             _logging.getLogger(__name__).warning(
                 "story_nodes / triples 人名替换失败（不影响主流程）: %s", exc
+            )
+
+    def _cleanup_orphaned_triples(
+        self,
+        novel_id: str,
+        deleted_char_ids: set,
+        deleted_loc_ids: set,
+        prev_name_by_id: dict,
+        prev_loc_name_by_id: dict,
+    ) -> None:
+        """删除已经被废弃/删除的角色和地点的所有知识图谱三元组连线。"""
+        if not deleted_char_ids and not deleted_loc_ids:
+            return
+
+        import logging
+        _log = logging.getLogger(__name__)
+        try:
+            from application.paths import get_db_path
+            from infrastructure.persistence.database.connection import get_database
+            conn = get_database(str(get_db_path())).get_connection()
+            cursor = conn.cursor()
+
+            total_deleted = 0
+            
+            # 删除相关的 Character Triples
+            for cid in deleted_char_ids:
+                old_name = (prev_name_by_id.get(cid) or "").strip()
+                cursor.execute(
+                    "DELETE FROM triples WHERE novel_id = ? AND (subject_entity_id = ? OR object_entity_id = ?)",
+                    (novel_id, cid, cid)
+                )
+                total_deleted += cursor.rowcount
+                if old_name:
+                    cursor.execute(
+                        "DELETE FROM triples WHERE novel_id = ? AND (subject = ? OR object = ?) AND (subject_entity_id IS NULL OR subject_entity_id = '') AND (object_entity_id IS NULL OR object_entity_id = '')",
+                        (novel_id, old_name, old_name)
+                    )
+                    total_deleted += cursor.rowcount
+
+            # 删除相关的 Location Triples
+            for lid in deleted_loc_ids:
+                old_name = (prev_loc_name_by_id.get(lid) or "").strip()
+                cursor.execute(
+                    "DELETE FROM triples WHERE novel_id = ? AND (subject_entity_id = ? OR object_entity_id = ?)",
+                    (novel_id, lid, lid)
+                )
+                total_deleted += cursor.rowcount
+                if old_name:
+                    cursor.execute(
+                        "DELETE FROM triples WHERE novel_id = ? AND (subject = ? OR object = ?) AND (subject_entity_id IS NULL OR subject_entity_id = '') AND (object_entity_id IS NULL OR object_entity_id = '')",
+                        (novel_id, old_name, old_name)
+                    )
+                    total_deleted += cursor.rowcount
+
+            if total_deleted > 0:
+                _log.info(
+                    "triples 清理：novel=%s 删除了 %d 个被废弃实体，共清理 %d 行孤立三元组",
+                    novel_id, len(deleted_char_ids) + len(deleted_loc_ids), total_deleted
+                )
+            conn.commit()
+        except Exception as exc:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "清理废弃角色的孤立三元组失败（不影响主流程）: %s", exc
             )

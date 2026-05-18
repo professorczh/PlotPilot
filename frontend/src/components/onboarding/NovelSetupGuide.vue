@@ -51,6 +51,7 @@
             <template #core_rules>
               <div class="dimension-fields" v-if="worldbuildingData.core_rules && Object.keys(worldbuildingData.core_rules).length">
                 <div v-for="(val, key) in worldbuildingData.core_rules" :key="key"
+                  v-if="val && String(val).trim()"
                   class="field-card" :class="{ 'field-card--streaming': activeDimension === 'core_rules' && activeField === key }">
                   <div class="field-card__title">{{ dimKeyLabels[key] || key }}</div>
                   <div class="field-card__content">{{ val }}<span v-if="activeDimension === 'core_rules' && activeField === key" class="streaming-cursor">▎</span></div>
@@ -60,6 +61,7 @@
             <template #geography>
               <div class="dimension-fields" v-if="worldbuildingData.geography && Object.keys(worldbuildingData.geography).length">
                 <div v-for="(val, key) in worldbuildingData.geography" :key="key"
+                  v-if="val && String(val).trim()"
                   class="field-card" :class="{ 'field-card--streaming': activeDimension === 'geography' && activeField === key }">
                   <div class="field-card__title">{{ dimKeyLabels[key] || key }}</div>
                   <div class="field-card__content">{{ val }}<span v-if="activeDimension === 'geography' && activeField === key" class="streaming-cursor">▎</span></div>
@@ -69,6 +71,7 @@
             <template #society>
               <div class="dimension-fields" v-if="worldbuildingData.society && Object.keys(worldbuildingData.society).length">
                 <div v-for="(val, key) in worldbuildingData.society" :key="key"
+                  v-if="val && String(val).trim()"
                   class="field-card" :class="{ 'field-card--streaming': activeDimension === 'society' && activeField === key }">
                   <div class="field-card__title">{{ dimKeyLabels[key] || key }}</div>
                   <div class="field-card__content">{{ val }}<span v-if="activeDimension === 'society' && activeField === key" class="streaming-cursor">▎</span></div>
@@ -78,6 +81,7 @@
             <template #culture>
               <div class="dimension-fields" v-if="worldbuildingData.culture && Object.keys(worldbuildingData.culture).length">
                 <div v-for="(val, key) in worldbuildingData.culture" :key="key"
+                  v-if="val && String(val).trim()"
                   class="field-card" :class="{ 'field-card--streaming': activeDimension === 'culture' && activeField === key }">
                   <div class="field-card__title">{{ dimKeyLabels[key] || key }}</div>
                   <div class="field-card__content">{{ val }}<span v-if="activeDimension === 'culture' && activeField === key" class="streaming-cursor">▎</span></div>
@@ -87,6 +91,7 @@
             <template #daily_life>
               <div class="dimension-fields" v-if="worldbuildingData.daily_life && Object.keys(worldbuildingData.daily_life).length">
                 <div v-for="(val, key) in worldbuildingData.daily_life" :key="key"
+                  v-if="val && String(val).trim()"
                   class="field-card" :class="{ 'field-card--streaming': activeDimension === 'daily_life' && activeField === key }">
                   <div class="field-card__title">{{ dimKeyLabels[key] || key }}</div>
                   <div class="field-card__content">{{ val }}<span v-if="activeDimension === 'daily_life' && activeField === key" class="streaming-cursor">▎</span></div>
@@ -584,13 +589,21 @@ import { drawGachaFullName } from '@/utils/characterNameGacha'
 
 const WB_DIMS = ['core_rules', 'geography', 'society', 'culture', 'daily_life'] as const
 
-/** 世界观维度 key → 中文标签 */
+/** 世界观维度 key → 中文标签（含 AI 可能自创的野生字段名） */
 const dimKeyLabels: Record<string, string> = {
+  // ── 核心法则 (core_rules) ──
   power_system: '力量体系',
   physics_rules: '物理规律',
   magic_tech: '魔法/科技',
   cost_and_limitation: '代价与限制',
   resource_scarcity: '稀缺资源',
+  core_conflict: '核心矛盾逻辑',
+  system_mechanics: '系统运作机制',
+  supernatural_limits: '超自然限制法则',
+  social_distribution_law: '社会阶层与分配法则',
+  physical_laws: '世界物理规则',
+
+  // ── 地理生态 (geography) ──
   terrain: '地形',
   climate: '气候',
   resources: '资源',
@@ -598,17 +611,46 @@ const dimKeyLabels: Record<string, string> = {
   forbidden_zones: '禁区',
   urban_core: '核心城市',
   hidden_realms: '秘境',
+  // AI 自创别名
+  geographical_landscape: '地理格局',
+  ecological_environment: '生态环境',
+  resource_distribution: '资源分布',
+  spatial_constraints: '空间约束',
+  geography_overview: '地理概述',
+  natural_environment: '自然环境',
+
+  // ── 社会结构 (society) ──
   politics: '政治',
   economy: '经济',
   class_system: '阶级',
   power_structure: '权力结构',
   oppression_mechanism: '压迫机制',
   class_division: '阶层划分',
+  // AI 自创别名
+  power_dynamics: '权力动态',
+  social_norms_and_taboos: '社会规范与禁忌',
+  social_structure: '社会组织',
+  hierarchical_system: '等级制度',
+  interpersonal_networks: '人际网络',
+  social_hierarchy: '社会阶层',
+  governance: '治理体系',
+
+  // ── 历史文化 (culture) ──
   history: '历史',
   religion: '宗教',
   taboos: '禁忌',
   worship: '崇拜与祭祀',
   oaths_and_curses: '誓言与诅咒',
+  // AI 自创别名
+  historical_background: '历史背景',
+  ideological_clash: '意识形态冲突',
+  traditional_values: '传统价值观',
+  social_customs: '社会风俗',
+  cultural_atmosphere: '文化氛围',
+  belief_system: '信仰体系',
+  cultural_heritage: '文化传承',
+
+  // ── 沉浸感细节 (daily_life) ──
   food_clothing: '衣食住行',
   language_slang: '俚语口音',
   entertainment: '娱乐方式',
@@ -616,6 +658,15 @@ const dimKeyLabels: Record<string, string> = {
   market_reality: '市场真相',
   food_and_drink: '饮食文化',
   slang_and_profanity: '黑话粗话',
+  // AI 自创别名
+  psychological_atmosphere: '心理氛围',
+  sensory_immersion: '感官沉浸',
+  temporal_rhythm: '时代节奏',
+  daily_life_details: '日常生活细节',
+  material_culture_icons: '物质文化符号',
+  material_culture: '物质文化',
+  daily_life: '日常生活',
+  living_conditions: '生活条件',
 }
 
 function emptyWorldbuildingShape(): Record<(typeof WB_DIMS)[number], Record<string, string>> {
